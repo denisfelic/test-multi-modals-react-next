@@ -13,6 +13,26 @@ interface IGlobalContext {
 }
 const GlobalContext = createContext({} as IGlobalContext);
 
+function useGetModalStateHandlers({ modalId }: { modalId: string }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { add, remove } = useContext(GlobalContext);
+
+  function onCloseCallback() {
+    remove(modalId);
+    setIsModalOpen(false);
+  }
+  function onOpenCallback() {
+    add(modalId);
+    setIsModalOpen(true);
+  }
+
+  return {
+    isModalOpen,
+    onCloseCallback,
+    onOpenCallback,
+  };
+}
+
 const GlobalContextProvider = ({ children }: any) => {
   const [modalStates, setModalStates] = useState<Map<string, boolean>>(
     new Map()
@@ -77,26 +97,10 @@ export default function RootLayout({
 const Modal = ({ id, isOpen, onClose, title, content }) => {
   if (!isOpen) return null;
 
-  const { add, remove } = useContext(GlobalContext);
-
-  function onCloseCallback() {
-    remove(id);
-    onClose();
-  }
-  function onOpenCallback() {
-    add(id);
-  }
-
-  useEffect(() => {
-    if (isOpen === true) {
-      onOpenCallback();
-    }
-  }, [isOpen]);
-
   return ReactDOM.createPortal(
     <div className="absolute overflow-y-auto    h-full inset-0 z-10 flex flex-col lg:left-1/4 lg:w-1/2 lg:h-[500px] ">
       <div className="flex-1 bg-gray-400 overflow-y-auto z-20 text-black border-4 border-red-500">
-        <button className="p-2" onClick={onCloseCallback}>
+        <button className="p-2" onClick={onClose}>
           Close Modal
         </button>
         <div className="p-4">
@@ -142,14 +146,19 @@ const Header = ({
   content: string;
   modalId: string;
 }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isModalOpen, onCloseCallback, onOpenCallback } =
+    useGetModalStateHandlers({ modalId });
   return (
     <>
       <header className={className}>
         <h1 className="text-2xl text-black">Header</h1>
         <button
           onClick={() => {
-            setIsModalOpen(true);
+            if (isModalOpen) {
+              onCloseCallback();
+            } else {
+              onOpenCallback();
+            }
           }}
         >
           Toggle header nav
@@ -162,7 +171,7 @@ const Header = ({
         title={title}
         isOpen={isModalOpen}
         onClose={() => {
-          setIsModalOpen(false);
+          onCloseCallback();
         }}
       />
     </>
